@@ -1,0 +1,121 @@
+import * as THREE from 'https://unpkg.com/three@0.136.0/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+
+document.body.style.margin = 0;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0a);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+camera.position.set(0, 10, 20);
+controls.update();
+
+const player = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 'blue' })
+);
+player.position.set(-5, 0.5, -5);
+scene.add(player);
+
+const monsterMaterial = new THREE.MeshStandardMaterial({ color: 'red', emissive: 'darkred' });
+const monster = new THREE.Mesh(
+    new THREE.BoxGeometry(1.5, 2, 1.5),
+    monsterMaterial
+);
+monster.position.set(0, 1, 0);
+scene.add(monster);
+
+const monsterLight = new THREE.PointLight(0xff0000, 0, 10);
+monsterLight.position.set(0, 2, 0);
+scene.add(monsterLight);
+
+const goal = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 'green' })
+);
+goal.position.set(5, 0.5, 5);
+scene.add(goal);
+
+const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshStandardMaterial({ color: 'darkgreen', side: THREE.DoubleSide })
+);
+plane.rotation.x = -Math.PI / 2;
+scene.add(plane);
+
+const light = new THREE.PointLight(0xffffff, 1, 50);
+light.position.set(0, 10, 0);
+scene.add(light);
+
+const trees = [];
+for (let i = 0; i < 20; i++) {
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, 2),
+        new THREE.MeshStandardMaterial({ color: 'brown' })
+    );
+    trunk.position.y = 1;
+    tree.add(trunk);
+    
+    const leaves = new THREE.Mesh(
+        new THREE.ConeGeometry(0.8, 2, 8),
+        new THREE.MeshStandardMaterial({ color: 'darkgreen' })
+    );
+    leaves.position.y = 2;
+    tree.add(leaves);
+    
+    tree.position.set(Math.random() * 18 - 9, 0, Math.random() * 18 - 9);
+    scene.add(tree);
+    trees.push(tree);
+}
+
+const keys = {};
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+function movePlayer() {
+    if (keys["ArrowUp"]) player.position.z -= 0.1;
+    if (keys["ArrowDown"]) player.position.z += 0.1;
+    if (keys["ArrowLeft"]) player.position.x -= 0.1;
+    if (keys["ArrowRight"]) player.position.x += 0.1;
+}
+
+function moveMonster() {
+    const speed = 0.05;
+    const dx = player.position.x - monster.position.x;
+    const dz = player.position.z - monster.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist > 0.5) {
+        monster.position.x += (dx / dist) * speed;
+        monster.position.z += (dz / dist) * speed;
+        monsterLight.intensity = Math.max(2 - dist * 0.2, 0); // Increase light as monster gets closer
+        monsterLight.position.set(monster.position.x, 2, monster.position.z);
+    }
+}
+
+function checkCollision(a, b) {
+    return Math.abs(a.position.x - b.position.x) < 0.5 &&
+           Math.abs(a.position.z - b.position.z) < 0.5;
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    movePlayer();
+    moveMonster();
+    if (checkCollision(player, monster)) {
+        alert("Caught by the monster! Try again.");
+        player.position.set(-5, 0.5, -5);
+        monster.position.set(0, 1, 0);
+    }
+    if (checkCollision(player, goal)) {
+        alert("You win! You reached the goal!");
+        player.position.set(-5, 0.5, -5);
+    }
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+animate();
